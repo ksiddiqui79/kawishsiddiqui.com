@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    
+    
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Date Diff Function - Kawish Siddiqui</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "date_diff Teradata UDF (SQL)", url: "#_top", children: [
+              {title: "Syntax date_diff():", url: "#syntax-date_diff" },
+              {title: "Function Code", url: "#function-code" },
+              {title: "Testing SQL", url: "#testing-sql" },
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+    <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-143819065-1', 'kawishsiddiqui.com');
+        ga('send', 'pageview');
+    </script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../aws/dl_form_aws/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../aws/dl_form_aws/" class="btn btn-xs btn-link">
+        DataLake Formation in AWS
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../.." class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../.." class="btn btn-xs btn-link">
+        Home
+      </a>
+    </div>
+    
+  </div>
+
+    
+
+    <h1 id="date_diff-teradata-udf-sql">date_diff Teradata UDF (SQL)</h1>
+<p>This function will return the difference between two timestamps.
+Input parameters are :
+Desire Difference (e.g. year, month, day, minute, hour, second)
+Start timestamp (e.g. ‘2000-10-18 22:03:07’)
+End timestamp(e.g. ‘2018-12-18 08:10:07’)</p>
+<h2 id="syntax-date_diff">Syntax date_diff():</h2>
+<pre><code class="sql">date_diff(‘year’, TIMESTAMP ‘2000-10-18 22:03:07’, TIMESTAMP ‘2018-12-18 08:10:07’)
+
+</code></pre>
+
+<h2 id="function-code">Function Code</h2>
+<pre><code class="sql">REPLACE FUNCTION syslib.date_diff(vDiff VARCHAR(255), StartTimestamp TIMESTAMP, EndTimeStamp TIMESTAMP)
+  RETURNS INT
+  LANGUAGE SQL
+  CONTAINS SQL
+  DETERMINISTIC
+  SQL SECURITY DEFINER
+  COLLATION INVOKER
+  INLINE TYPE 1
+  RETURN 
+      ROUND(
+      CASE WHEN UPPER(vDiff) = 'YEAR' THEN
+              (EXTRACT(DAY FROM (EndTimeStamp  - StartTimestamp DAY(4) TO SECOND)) / 365)
+          WHEN  UPPER(vDiff) = 'MONTH' THEN
+              (EXTRACT(DAY FROM (EndTimeStamp  - StartTimestamp DAY(4) TO SECOND)) / 365)*12
+          WHEN  UPPER(vDiff) = 'DAY' THEN
+              (EXTRACT(DAY FROM (EndTimeStamp  - StartTimestamp DAY(4) TO SECOND)))
+          WHEN  UPPER(vDiff) = 'HOUR' THEN
+              (EXTRACT(DAY FROM (EndTimeStamp  - StartTimestamp DAY(4) TO SECOND)) * (24))
+             + (EXTRACT(HOUR FROM (EndTimeStamp - StartTimestamp DAY(4) TO SECOND)))
+          WHEN  UPPER(vDiff) = 'MINUTE' THEN
+              (EXTRACT(DAY FROM (EndTimeStamp  - StartTimestamp DAY(4) TO SECOND)) * (24*60))
+             + (EXTRACT(HOUR FROM (EndTimeStamp - StartTimestamp DAY(4) TO SECOND)) * 60)
+             + (EXTRACT(MINUTE FROM (EndTimeStamp - StartTimestamp DAY(4) TO SECOND)) )
+          WHEN  UPPER(vDiff) = 'SECOND' THEN
+              (EXTRACT(DAY FROM (EndTimeStamp  - StartTimestamp DAY(4) TO SECOND)) * (246060))
+             + (EXTRACT(HOUR FROM (EndTimeStamp - StartTimestamp DAY(4) TO SECOND)) * (60*60))
+             + (EXTRACT(MINUTE FROM (EndTimeStamp - StartTimestamp DAY(4) TO SECOND)) * 60)
+             + EXTRACT(SECOND FROM (EndTimeStamp - StartTimestamp DAY(4) TO SECOND))
+      ELSE -1
+      END
+     )
+     ; 
+</code></pre>
+
+<h2 id="testing-sql">Testing SQL</h2>
+<pre><code class="sql">WITH tsval AS 
+   (
+      SELECT TIMESTAMP '2000-10-18 22:03:07' starttime
+           , TIMESTAMP '2018-12-18 22:03:07' endtime 
+   ),
+   dv AS
+   (
+      SELECT 'YEAR' (VARCHAR(255)) dval FROM (SELECT 1 a) a UNION
+      SELECT 'MONTH' (VARCHAR(255)) dval FROM (SELECT 1 a) a UNION
+      SELECT 'day' (VARCHAR(255)) dval FROM (SELECT 1 a) a UNION
+      SELECT 'hOuR' (VARCHAR(255)) dval FROM (SELECT 1 a) a UNION
+      SELECT 'SeCoNd' (VARCHAR(255)) dval FROM (SELECT 1 a) a UNION
+      SELECT 'MiNute' (VARCHAR(255)) dval FROM (SELECT 1 a) a  
+   )
+     SELECT dval , starttime, endtime, syslib.date_diff(dval, starttime, endtime) 
+     FROM tsval, dv ;
+</code></pre>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../../aws/dl_form_aws/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../../aws/dl_form_aws/" class="btn btn-xs btn-link">
+        DataLake Formation in AWS
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../.." class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../.." class="btn btn-xs btn-link">
+        Home
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/ksiddiqui79/repository/edit/master/docs/teradata/td_date_diff.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

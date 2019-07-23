@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    
+    
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Redshift Vacuum Analyze - Kawish Siddiqui</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Analyze &amp; Vacuum Schema Utility", url: "#_top", children: [
+              {title: "Vacuum", url: "#vacuum" },
+              {title: "Analyze", url: "#analyze" },
+              {title: "Summary of Parameters:", url: "#summary-of-parameters" },
+              {title: "Sample Usage", url: "#sample-usage" },
+              {title: "Install Notes", url: "#install-notes" },
+              {title: "Limitations", url: "#limitations" },
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+    <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-143819065-1', 'kawishsiddiqui.com');
+        ga('send', 'pageview');
+    </script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../awslabs_SystemTablePersistence/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../awslabs_SystemTablePersistence/" class="btn btn-xs btn-link">
+        System Table Persistence
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../RedshiftQMRActvtMon/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../RedshiftQMRActvtMon/" class="btn btn-xs btn-link">
+        Redshift QMR Notification Utility
+      </a>
+    </div>
+    
+  </div>
+
+    
+
+    <h1 id="analyze-vacuum-schema-utility">Analyze &amp; Vacuum Schema Utility</h1>
+<p>In order to get the best performance from your Redshift Database, you must ensure that database tables regularly analyzed and vacuumed. For more information , please read the below Redshift documentation,</p>
+<p>http://docs.aws.amazon.com/redshift/latest/dg/t_Reclaiming_storage_space202.html
+http://docs.aws.amazon.com/redshift/latest/dg/t_Analyzing_tables.html</p>
+<p>Whenever you insert, delete, or update (In Redshift update = delete + insert) a significant number of rows, you should run a VACUUM command and then an ANALYZE command. 
+In Redshift, the data blocks are immutable, i.e. when rows are DELETED or UPDATED against a table they are simply logically deleted (flagged for deletion), but not physically removed from disk. This causes the rows to continue consuming disk space and those blocks are scanned when a query scans the table. The result of this, table storage space is increased and degraded performance due to otherwise avoidable disk IO during scans. A vacuum recovers the space from deleted rows and restores the sort order. </p>
+<p>To avoid resource intensive VACUUM operation, you can load the data in sort key order, or design your table maintain data for a rolling time period, using time series tables. </p>
+<p>If your table has a large unsorted region (which can’t be vacuumed), a deep copy is much faster than a vacuum. You can use the Column Encoding Utility from our open source GitHub project https://github.com/awslabs/amazon-redshift-utils to perform a deep copy. The Column Encoding Utility takes care of the compression analysis, column encoding and deep copy.</p>
+<p>The ANALYZE command updates the statistics metadata, which enables the query optimizer to generate more accurate query plans. COPY automatically updates statistics after loading an empty table, so your statistics should be up to date. </p>
+<p>The Redshift ‘Analyze Vacuum Utility’ gives you the ability to automate VACUUM and ANALYZE operations. When run, it will VACUUM or ANALYZE an entire schema or individual tables. </p>
+<p>This Utility Analyzes and Vacuums table(s) in a Redshift Database schema, based on certain parameters like unsorted, stats off and size of the table and system alerts from <code>stl_explain</code> &amp; <code>stl_alert_event_log</code>. By turning on/off '--analyze-flag’ and  '--vacuum-flag' parameters, you can run it as  'vacuum-only' or  'analyze-only' utility. This script can be scheduled to run VACUUM and ANALYZE as part of regular maintenance/housekeeping activities, when there are fewer database activities.</p>
+<h2 id="vacuum">Vacuum</h2>
+<p>This script runs vacuum in two phases,</p>
+<h3 id="phase-1">Phase 1:</h3>
+<p>Identify and run vacuum based on the alerts recorded in <code>stl_alert_event_log</code>. <code>stl_alert_event_log</code>, records an alert when the query optimizer identifies conditions that might indicate performance issues. We can use the <code>stl_alert_event_log</code> table to identify the top 25 tables that need vacuum. The script uses SQL to get the list of tables and number of alerts, which indicate that vacuum is required.</p>
+<p>Variables affecting this phase:</p>
+<ul>
+<li><code>goback_no_of_days</code>: To control number days to look back from CURRENT_DATE</li>
+</ul>
+<h3 id="phase-2">Phase 2:</h3>
+<p>Identify and run vacuum based on certain thresholds related to table statistics (Like unsorted &gt; 10% and Stats Off &gt; 10% and limited to specific table sizes.</p>
+<p>Variables affecting this phase:</p>
+<ul>
+<li><code>stats_off_pct</code>: To control the threshold of statistics inaccuracy</li>
+<li><code>min_unsorted_pct</code>: To control the lower limit of unsorted blocks</li>
+<li><code>max_unsorted_pct</code>: To control the upper limit of unsorted blocks (preventing vacuum on super large tables)</li>
+<li><code>max_tbl_size_mb</code>: To control when a table is too large to be vacuumed by this utility</li>
+</ul>
+<h2 id="analyze">Analyze</h2>
+<p>This script runs Analyze in two phases:</p>
+<h3 id="phase-1_1">Phase 1:</h3>
+<p>Run ANALYZE based on the alerts recorded in <code>stl_explain</code> &amp; <code>stl_alert_event_log</code>. </p>
+<h3 id="phase-2_1">Phase 2:</h3>
+<p>Run ANALYZE based the <code>stats_off</code> metric in <code>svv_table_info</code>. If table has a <code>stats_off_pct</code> &gt; 10%, then the script runs ANALYZE command to update the statistics.</p>
+<h2 id="summary-of-parameters">Summary of Parameters:</h2>
+<table>
+<thead>
+<tr>
+<th align="left">Parameter</th>
+<th align="center">Mandatory</th>
+<th align="left">Default Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">--db</td>
+<td align="center">Yes</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left">--db-user</td>
+<td align="center">Yes</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left">--db-pwd</td>
+<td align="center">Yes</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left">--db-host</td>
+<td align="center">Yes</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left">--db-port</td>
+<td align="center">No</td>
+<td align="left">5439</td>
+</tr>
+<tr>
+<td align="left">--db-conn-opts</td>
+<td align="center">No</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left">--schema-name</td>
+<td align="center">No</td>
+<td align="left">Public</td>
+</tr>
+<tr>
+<td align="left">--table-name</td>
+<td align="center">No</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left">--output-file</td>
+<td align="center">Yes</td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left">--debug</td>
+<td align="center">No</td>
+<td align="left">False</td>
+</tr>
+<tr>
+<td align="left">--slot-count</td>
+<td align="center">No</td>
+<td align="left">1</td>
+</tr>
+<tr>
+<td align="left">--ignore-errors</td>
+<td align="center">No</td>
+<td align="left">False</td>
+</tr>
+<tr>
+<td align="left">--query_group</td>
+<td align="center">No</td>
+<td align="left">None</td>
+</tr>
+<tr>
+<td align="left">--analyze-flag</td>
+<td align="center">No</td>
+<td align="left">False</td>
+</tr>
+<tr>
+<td align="left">--vacuum-flag</td>
+<td align="center">No</td>
+<td align="left">False</td>
+</tr>
+<tr>
+<td align="left">--vacuum-parameter</td>
+<td align="center">No</td>
+<td align="left">FULL</td>
+</tr>
+<tr>
+<td align="left">--min-unsorted-pct</td>
+<td align="center">No</td>
+<td align="left">0.05</td>
+</tr>
+<tr>
+<td align="left">--max-unsorted-pct</td>
+<td align="center">No</td>
+<td align="left">0.5</td>
+</tr>
+<tr>
+<td align="left">--stats-off-pct</td>
+<td align="center">No</td>
+<td align="left">0.1</td>
+</tr>
+<tr>
+<td align="left">--stats-threshold</td>
+<td align="center">No</td>
+<td align="left">0.1</td>
+</tr>
+<tr>
+<td align="left">--max-table-size-mb</td>
+<td align="center">No</td>
+<td align="left">700*1024</td>
+</tr>
+<tr>
+<td align="left">--predicate-cols</td>
+<td align="center">No</td>
+<td align="left">False</td>
+</tr>
+</tbody>
+</table>
+<p>The above parameter values depend on the cluster type, table size, available system resources and available ‘Time window’ etc. The default values provided here are based on ds2.8xlarge, 8 node cluster. It may take some trial and error to come up with correct parameter values to vacuum and analyze your table(s). If table size is greater than certain size (<code>max_table_size_mb</code>) and has a large unsorted region (<code>max_unsorted_pct</code>), consider performing a deep copy, which will be much faster than a vacuum.</p>
+<p>As VACUUM &amp; ANALYZE operations are resource intensive, you should ensure that this will not adversely impact other database operations running on your cluster. AWS has thoroughly tested this software on a variety of systems, but cannot be responsible for the impact of running the utility against your database.</p>
+<h3 id="parameter-guidance">Parameter Guidance</h3>
+<h3 id="schema-name">Schema Name</h3>
+<p>The utility will accept a valid schema name, or alternative a regular expression pattern which will be used to match to all schemas in the database. This uses Posix regular expression syntax. You can use <code>(.*)</code> to match all schemas. </p>
+<h4 id="slot-count">Slot Count</h4>
+<p>Sets the number of query slots a query will use.</p>
+<p>Workload management (WLM) reserves slots in a service class according to the concurrency level set for the queue (for example, if concurrency level is set to 5, then the service class has 5 slots). WLM allocates the available memory for a service class equally to each slot. For more information, see Implementing Workload Management.</p>
+<p>For operations where performance is heavily affected by the amount of memory allocated, such as Vacuum, increasing the value of wlm_query_slot_count can improve performance. In particular, for slow Vacuum commands, inspect the corresponding record in the <code>SVV_VACUUM_SUMMARY</code> view. If you see high values (close to or higher than 100) for <code>sort_partitions</code> and <code>merge_increments</code> in the <code>SVV_VACUUM_SUMMARY</code> view, consider increasing the value for <code>wlm_query_slot_count</code> the next time you run Vacuum against that table.</p>
+<p>Increasing the value of wlm_query_slot_count limits the number of concurrent queries that can be run.</p>
+<p>Note:</p>
+<p>If the value of <code>wlm_query_slot_count</code> is larger than the number of available slots (concurrency level) for the queue targeted by the user, the utilty will fail. If you encounter an error, decrease <code>wlm_query_slot_count</code> to an allowable value.</p>
+<h4 id="analyze-flag">analyze-flag</h4>
+<p>Flag to turn ON/OFF ANALYZE functionality (True or False). If you want run the script to only perform ANALYZE on a schema or table, set this value ‘False’ : Default = ‘False’.</p>
+<h4 id="vacuum-flag">vacuum-flag</h4>
+<p>Flag to turn ON/OFF VACUUM functionality (True or False). If you want run the script to only perform VACUUM on a schema or table, set this value ‘False’ : Default = ‘False’.</p>
+<h4 id="vacuum-parameter">vacuum-parameter</h4>
+<p>Specify vacuum parameters [ <code>FULL | SORT ONLY | DELETE ONLY | REINDEX</code> ] Default = FULL</p>
+<h4 id="min-unsorted-pct">min-unsorted-pct</h4>
+<p>Minimum unsorted percentage (%) to consider a table for vacuum: Default = 5%.</p>
+<h4 id="max-unsorted-pct">max-unsorted-pct</h4>
+<p>Maximum unsorted percentage(%) to consider a table for vacuum : Default = 50%.</p>
+<h4 id="stats-off-pct">stats-off-pct</h4>
+<p>Minimum stats off percentage(%) to consider a table for analyze : Default = 10%</p>
+<h4 id="max-table-size-mb">max-table-size-mb</h4>
+<p>Maximum table size 700GB in MB : Default = 700*1024 MB</p>
+<h4 id="predicate-cols">predicate-cols</h4>
+<p>Analyze predicate columns only. Default = False</p>
+<h2 id="sample-usage">Sample Usage</h2>
+<pre><code>python analyze-vacuum-schema.py  --db &lt;&gt; --db-user &lt;&gt; --db-pwd &lt;&gt; --db-port 8192 --db-host aaa.us-west-2.redshift.amazonaws.com --schema-name public  --table-name customer_v6 --output-file /Users/test.log --debug True  --ignore-errors False --slot-count 2 --min-unsorted-pct 5 --max-unsorted-pct 50 --stats-off-pct 10 --max-table-size-mb 700*1024
+</code></pre>
+
+<h2 id="install-notes">Install Notes</h2>
+<pre><code>sudo easy_install pip  
+sudo pip install 
+</code></pre>
+
+<h2 id="limitations">Limitations</h2>
+<ol>
+<li>Script runs all VACUUM commands sequentially. Currently in Redshift multiple concurrent vacuum operations are not supported. </li>
+<li>Script runs all ANALYZE commands sequentially not concurrently.</li>
+<li>Does not support column level ANALYZE. </li>
+<li>Multiple schemas are not supported.</li>
+<li>Skew factor is not considered.</li>
+</ol>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../awslabs_SystemTablePersistence/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../awslabs_SystemTablePersistence/" class="btn btn-xs btn-link">
+        System Table Persistence
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../RedshiftQMRActvtMon/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../RedshiftQMRActvtMon/" class="btn btn-xs btn-link">
+        Redshift QMR Notification Utility
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/ksiddiqui79/repository/edit/master/docs/redshift/Vacclyze.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    
+    
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Vba concatif - Kawish Siddiqui</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "VBA MS Excel ConcatIF Function", url: "#_top", children: [
+          ]},
+          {title: "VBA Code", url: "#vba-code", children: [
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+    <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-143819065-1', 'kawishsiddiqui.com');
+        ga('send', 'pageview');
+    </script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    
+
+    <h1 id="vba-ms-excel-concatif-function">VBA MS Excel ConcatIF Function</h1>
+<p>Since long time I have been thinking to have a function in Excel like SUMIF. Initially I thought Office 2010 will bring this feature/function.
+But now I have solution function here for all.</p>
+<h1 id="vba-code">VBA Code</h1>
+<pre><code class="VBA">Public Function ConcatIf(ByRef FindInRange As Range, ByRef FindText As String, ByRef StringRange As Range, Optional ByRef strDelimiter As String)
+If IsNull(strDelimiter) Then strDelimiter = &quot;,&quot;
+Dim l As Integer
+Dim result As String
+
+For l = 1 To FindInRange.Count
+   If FindInRange(l, 1) = FindText Then
+      If IsNull(result) Or Trim(result) = &quot;&quot; Then
+         result = StringRange(l, 1)
+      Else
+         If StringRange(l, 1)  &quot;&quot; Then result = result &amp; strDelimiter &amp; StringRange(l, 1)
+      End If
+   End If
+Next
+ConcatIf2 = CStr(result)
+End Function
+</code></pre>
+
+  <br>
+    
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/ksiddiqui79/repository/edit/master/docs/vba/vba_concatif.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

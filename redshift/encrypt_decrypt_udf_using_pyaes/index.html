@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    
+    
+    <link rel="shortcut icon" href="../../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Redshift Encryption UDF - Kawish Siddiqui</title>
+    <link href="../../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/highlight.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../../js/jquery-3.2.1.min.js"></script>
+    <script src="../../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '../..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "Encryption &amp; Decryption UDF in Amazon Redshift", url: "#_top", children: [
+              {title: "Amazon Redshift UDF Support", url: "#amazon-redshift-udf-support" },
+              {title: "Encryption and Decryption UDF", url: "#encryption-and-decryption-udf" },
+          ]},
+          {title: "Deployment", url: "#deployment", children: [
+              {title: "Create library", url: "#create-library" },
+              {title: "Create encrypt function", url: "#create-encrypt-function" },
+              {title: "Create decrypt function", url: "#create-decrypt-function" },
+              {title: "Test function with same key for encrypt and decrypt", url: "#test-function-with-same-key-for-encrypt-and-decrypt" },
+              {title: "Test function with same key for encrypt but different key to decrypt", url: "#test-function-with-same-key-for-encrypt-but-different-key-to-decrypt" },
+          ]},
+        ];
+
+    </script>
+    <script src="../../js/base.js"></script>
+    <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-143819065-1', 'kawishsiddiqui.com');
+        ga('send', 'pageview');
+    </script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../RedshiftQMRActvtMon/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../RedshiftQMRActvtMon/" class="btn btn-xs btn-link">
+        Redshift QMR Notification Utility
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../aws/dl_form_aws/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../aws/dl_form_aws/" class="btn btn-xs btn-link">
+        DataLake Formation in AWS
+      </a>
+    </div>
+    
+  </div>
+
+    
+
+    <h1 id="encryption-decryption-udf-in-amazon-redshift">Encryption &amp; Decryption UDF in Amazon Redshift</h1>
+<h2 id="amazon-redshift-udf-support">Amazon Redshift UDF Support</h2>
+<p>Amazon Redshift supports <a href="https://docs.aws.amazon.com/redshift/latest/dg/user-defined-functions.html">User Defined Fuction</a> using SQL or Python.</p>
+<h2 id="encryption-and-decryption-udf">Encryption and Decryption UDF</h2>
+<p>This function uses <code>pyaes</code> module to encrypt data using AES <code>encrypt</code> and <code>decrypt</code> functions.<br />
+<strong>AED encryption needs atleast 16 character key to encrypt data, key length less than 16 characters may throw error.</strong></p>
+<h1 id="deployment">Deployment</h1>
+<h2 id="create-library">Create library</h2>
+<pre><code class="SQL">CREATE OR REPLACE LIBRARY pyaes  
+LANGUAGE plpythonu  
+FROM 'https://github.com/ksiddiqui79/redshift_udfs/blob/master/encrypt_decrypt_udf/using_pyaes/pyaes.zip?raw=true'  
+;  
+</code></pre>
+
+<h2 id="create-encrypt-function">Create encrypt function</h2>
+<pre><code class="SQL">CREATE OR REPLACE FUNCTION aes_encrypt(input VARCHAR(max), vKey VARCHAR(256))  
+RETURNS VARCHAR STABLE AS $$  
+  import pyaes  
+  import binascii  
+  if input is None:  
+    return None  
+  key = vKey # Your Key here  
+  aes=pyaes.AESModeOfOperationCTR(key)  
+  cipher_txt=aes.encrypt(input)  
+  cipher_txt2=binascii.hexlify(cipher_txt)  
+  return str(cipher_txt2.decode('utf-8'))  
+$$ LANGUAGE plpythonu  
+;  
+</code></pre>
+
+<h2 id="create-decrypt-function">Create decrypt function</h2>
+<pre><code class="SQL">CREATE OR REPLACE FUNCTION aes_decrypt(encrypted_msg varchar(max), vKey VARCHAR(256))  
+RETURNS VARCHAR STABLE AS $$  
+  import pyaes  
+  import binascii  
+  if encrypted_msg is None or len(str(encrypted_msg)) == 0:  
+       return None  
+  key = vKey # Your decryption key here  
+  aes = pyaes.AESModeOfOperationCTR(key)  
+  encrypted_msg2=binascii.unhexlify(encrypted_msg)  
+  decrypted_msg2 = aes.decrypt(encrypted_msg2)  
+  return str(decrypted_msg2.decode('utf-8'))  
+$$ LANGUAGE plpythonu ;  
+</code></pre>
+
+<h2 id="test-function-with-same-key-for-encrypt-and-decrypt">Test function with same key for encrypt and decrypt</h2>
+<p><strong>SQL</strong>  </p>
+<pre><code class="SQL">SELECT aes_encrypt(myVal, myKey) encdata, aes_decrypt(enc_data, myKey) decdata  
+FROM (SELECT 'Kawish Siddiqui' myVal, LPAD(myVal, 16, 'z') myKey) a;  
+</code></pre>
+
+<p><strong>Result</strong>  </p>
+<table>
+<thead>
+<tr>
+<th>encdata</th>
+<th>decdata</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9a861c3fc1007a9b50f16ef7e1927d</td>
+<td>Kawish Siddiqui</td>
+</tr>
+</tbody>
+</table>
+<h2 id="test-function-with-same-key-for-encrypt-but-different-key-to-decrypt">Test function with same key for encrypt but different key to decrypt</h2>
+<pre><code class="SQL">SELECT aes_encrypt(myVal, myKey) encdata, aes_decrypt(enc_data, myKey||'x') decdata  
+FROM (SELECT 'Kawish Siddiqui' myVal, LPAD(myVal, 16, 'z') myKey) a;  
+</code></pre>
+
+<p><strong>Above SQL should throw an error similar to :</strong>  </p>
+<pre><code>[Amazon](500310) Invalid operation: ValueError: Invalid key size. Please look at svl_udf_log for more information  
+Details:   
+ -----------------------------------------------;  
+  error:  ValueError: Invalid key size. Please look at svl_udf_log for more information  
+  code:      10000  
+  context:   UDF  
+  query:     0  
+  location:  udf_client.cpp:369  
+  process:   padbmaster [pid=91425]  
+  -----------------------------------------------;  
+1 statement failed.  
+</code></pre>
+
+<h3 id="check-for-error-details-if-error-occured">Check for error details if error occured</h3>
+<pre><code class="SQL">SELECT * FROM svl_udf_log;  
+</code></pre>
+
+  <br>
+    
+
+    
+    
+      
+    
+
+  <div class="row wm-article-nav-buttons" role="navigation" aria-label="navigation">
+    
+    <div class="wm-article-nav pull-right">
+      <a href="../RedshiftQMRActvtMon/" class="btn btn-xs btn-default pull-right">
+        Next
+        <i class="fa fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a href="../RedshiftQMRActvtMon/" class="btn btn-xs btn-link">
+        Redshift QMR Notification Utility
+      </a>
+    </div>
+    
+    <div class="wm-article-nav">
+      <a href="../../aws/dl_form_aws/" class="btn btn-xs btn-default pull-left">
+        <i class="fa fa-chevron-left" aria-hidden="true"></i>
+        Previous</a><a href="../../aws/dl_form_aws/" class="btn btn-xs btn-link">
+        DataLake Formation in AWS
+      </a>
+    </div>
+    
+  </div>
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/ksiddiqui79/repository/edit/master/docs/redshift/encrypt_decrypt_udf_using_pyaes.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>

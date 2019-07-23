@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+  
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    
+    
+    <link rel="shortcut icon" href="../img/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Bkp dl form aws - Kawish Siddiqui</title>
+    <link href="../css/bootstrap-3.3.7.min.css" rel="stylesheet">
+    <link href="../css/font-awesome-4.7.0.css" rel="stylesheet">
+    <link href="../css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/highlight.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+
+    <script src="../js/jquery-3.2.1.min.js"></script>
+    <script src="../js/bootstrap-3.3.7.min.js"></script>
+    <script src="../js/highlight.pack.js"></script>
+    
+    <base target="_top">
+    <script>
+      var base_url = '..';
+      var is_top_frame = false;
+        
+        var pageToc = [
+          {title: "DataLake Formation in AWS", url: "#_top", children: [
+              {title: "High Level Data Lake Architecture", url: "#high-level-data-lake-architecture" },
+          ]},
+          {title: "Building a Data Lake from a Relational Data Store", url: "#building-a-data-lake-from-a-relational-data-store", children: [
+              {title: "Hydrating the Data Lake", url: "#hydrating-the-data-lake" },
+              {title: "Creating Glue Data Catalog of Tier-1 Bucket for processing", url: "#creating-glue-data-catalog-of-tier-1-bucket-for-processing" },
+              {title: "Glue ETL Job for Tier-2 Data", url: "#glue-etl-job-for-tier-2-data" },
+              {title: "Compaction ETL Job", url: "#compaction-etl-job" },
+              {title: "Detailed Data Lake Formation Architecture", url: "#detailed-data-lake-formation-architecture" },
+              {title: "Detailed ELT Pipeline", url: "#detailed-elt-pipeline" },
+              {title: "Best Practices and Performance Considerations", url: "#best-practices-and-performance-considerations" },
+              {title: "Assumptions &amp; Additional Considerations", url: "#assumptions-additional-considerations" },
+          ]},
+        ];
+
+    </script>
+    <script src="../js/base.js"></script>
+    <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-143819065-1', 'kawishsiddiqui.com');
+        ga('send', 'pageview');
+    </script> 
+</head>
+
+<body>
+<script>
+if (is_top_frame) { $('body').addClass('wm-top-page'); }
+</script>
+
+
+
+<div class="container-fluid wm-page-content">
+  <a name="_top"></a>
+    
+
+    
+
+    <p>Article Credit: <a href="https://github.com/dhawalkp">dhawalkp</a> | Source Repository: <a href="https://github.com/dhawalkp/datalake">datalake</a></p>
+<p><em>Disclaimer: This code must not be used for production use as is. This sample is developed only to educate the users in using some of the features of the AWS in developing a ETL Pipeline using AWS Glue and other services. This is my personal github location and is maintained solely by me.
+This is not the official AWS Open source repository.</em></p>
+<h1 id="datalake-formation-in-aws">DataLake Formation in AWS</h1>
+<p>A Data lake contains all data, both raw sources over extended periods of time as well as any processed data. They enable users across multiple business units to refine, explore and enrich data on their terms. Also, enables multiple data access patterns across a shared infrastructure: batch, interactive, online, search, in-memory and other processing engines.</p>
+<p>AWS Glue provides a serverless Spark-based data processing service. Glue is based on open source frameworks like Apache Spark and the Hive Metastore. This allows our users to go beyond the traditional ETL use cases into more data prep and data processing spanning data exploration, data science, and ofcourse data prep for analytics. 
+Glue helps users do three things – Discover and understand their data by cataloguing it into a central metadata Catalog, offering libraries and tools to efficiently develop their data prep code, and then run it at scale on a serverless, full managed environment. </p>
+<p>The backbone storage service for Data Lake best suited is AWS S3. The native features of S3 are exactly what you want from a Data Lake - Replication across AZ’s for high availability and durability, Massively parallel, scalable (Storage scales independent of compute) and Low storage cost.</p>
+<h2 id="high-level-data-lake-architecture">High Level Data Lake Architecture</h2>
+<p><img alt="" src="https://github.com/dhawalkp/datalake/raw/master/High_Level_architecture_DataLake.png" /></p>
+<h1 id="building-a-data-lake-from-a-relational-data-store">Building a Data Lake from a Relational Data Store</h1>
+<p>This repository contains the sample reference implementation to create data lake from Relational Database services as one of the sources.</p>
+<ul>
+<li>
+<p>Source RDS Customer Table Schema can be created by crawler through AWS Glue Crawlers</p>
+</li>
+<li>
+<p>Sample Full Log Customer record format generated by DMS:
+The sample cdc log file is in data/Tier-1/Customer/Full/ folder structure </p>
+</li>
+<li>
+<p>Sample CDC Log Customer Record format generated by DMS 
+The sample cdc log file is in repo folder - "/data/Tier-1/Customer/CDC/YYYY/MM/DD" folder structure assuming the data are initially partitioned based on the day</p>
+</li>
+</ul>
+<p>Please notice the additional OP column in CDC log file added by DMS to tag the type of change.</p>
+<p>The implementation consists of </p>
+<h2 id="hydrating-the-data-lake">Hydrating the Data Lake</h2>
+<ul>
+<li>AWS RDS backed by Oracle DB engine integrating with AWS DMS service generating Full and CDC Log files and storing the files on Tier-1 S3 Bucket. Alternatively, the Tier-1 bucket can be hydrated by periodic export process that dumps all the changes as well.</li>
+<li>The Tier-1 bucket in this example is partitioned based on year/month/day/hour</li>
+</ul>
+<h2 id="creating-glue-data-catalog-of-tier-1-bucket-for-processing">Creating Glue Data Catalog of Tier-1 Bucket for processing</h2>
+<ul>
+<li>AWS Glue Crawlers needs to be configured in order to process CDC and Full Log files in the tier-1 bucket and create data catalog for both. In this case, the Tier-1 Database in Glue will consist of 2 tables i.e. CDC and Full</li>
+</ul>
+<h2 id="glue-etl-job-for-tier-2-data">Glue ETL Job for Tier-2 Data</h2>
+<ul>
+<li>Tier-2 ETL job will re-partition based on required keys and hydrate the tier-2 buckets in S3 with S3 Objects based on the partition keys. The script is available in this repo with name - /scripts/DMS_CDC_Tier2_Repartitioning_CustomerID.py and /scripts/DMS_FullLog_Tier2_Repartitioning_CustomerID.py</li>
+<li>The Tier-2 S3 bucket will eventually have Partitions consisting of multiple versions of S3 Objects for same key.</li>
+</ul>
+<h2 id="compaction-etl-job">Compaction ETL Job</h2>
+<ul>
+<li>The Compaction job i.e. /scripts/Compaction.py basically deletes the older versions of Objects for all the partitions in tier-2 bucket. In this example, the script uses the last modified time stamp of S3 Object to build the compaction logic. Please refer to additional considerations section below in this documentation for alternative approaches to preserve the consistency.</li>
+</ul>
+<h2 id="detailed-data-lake-formation-architecture">Detailed Data Lake Formation Architecture</h2>
+<p><img alt="" src="https://github.com/dhawalkp/datalake/raw/master/Data_Pipeline_Architecture.png" /></p>
+<h2 id="detailed-elt-pipeline">Detailed ELT Pipeline</h2>
+<p><img alt="" src="https://github.com/dhawalkp/datalake/raw/master/Compaction.png" /></p>
+<h2 id="best-practices-and-performance-considerations">Best Practices and Performance Considerations</h2>
+<ul>
+<li>
+<p>One of the key design decisions in making the solution performant will be the selection of appropriate partition keys for target S3 buckets. Please read <a href="https://aws.amazon.com/blogs/big-data/work-with-partitioned-data-in-aws-glue/">Working with Partitioned Data in AWS Glue</a>. Partitioning the Source and Target Buckets via Relevant Partition Keys and making use of it in avoiding cross partition joins or full scans.</p>
+</li>
+<li>
+<p>Use Parquet or ORC and S3 Paths for formatting and organizing the data as per partition keys with Compression like Snappy/Gzip formats</p>
+</li>
+<li>Use Glue DynamicFrames and make use of PushDownPRedicates based on Partitions to improve/reduce on GETs/PUTs to S3</li>
+<li>Use applyMapping wherever possible to restrict the columns</li>
+<li>In Writing the dynamic frames into partitioned sinks, try to use additional Partitionkeys option so that you can directly write it from DynamicFrame instead of doing intermediate conversion into Spark DataFrame.</li>
+<li>Use Compaction Technique periodically to delete the old objects for the same key.</li>
+<li>DMS CDC/Full Load files contains timestamp in the name and should be used to process the data based on this. Care must be taken to make sure multiple CDC Records for same key are not processed in parallel to avoid Data Consistency issues during CDC records consolidation phase.</li>
+</ul>
+<h2 id="assumptions-additional-considerations">Assumptions &amp; Additional Considerations</h2>
+<h3 id="consistency-and-ordering">Consistency and Ordering</h3>
+<ul>
+<li>
+<p>Multiple changes on the same record can appear in a CDC file generated by AWS DMS.Though, CDC guarantees the files delivered to S3 are in order. The transaction integrity can be maintained as long as you follow the ordering of changes in the file and across sequence of files. The recommendation will be to also have Modification Time Stamp embedded in the source table so that the consistency can be maintained. The Alternative approach to not having modification time stamp in the source table will be to implement pre-tier-1 ETL job that transforms the CDC records and add a synthetic sequence number.</p>
+</li>
+<li>
+<p>Since S3 updates are eventual consistent, a mechanism needs to be developed to make sure the data being queried are not being mutated at the same time. You have to employ the use of temporary scratch location and then compact in tier-3 bucket for example.</p>
+</li>
+<li>There may be delays in S3 Upserts and so reliance on S3 Object Last Modified Time may cause inconsistent results. An alternative approach could be to use the DMS CDC logtimestamp or Update Time Stamp column (if present) of the original data and add as meta data in S3 Object and use that for compaction job.</li>
+</ul>
+<h3 id="idempotence">Idempotence</h3>
+<ul>
+<li>The ETL job should be aware of idempotence requirements. Since CDC Records presents the latest copy of entire record, the idempotence should not be a concern for ETL job in this case.</li>
+</ul>
+<h3 id="performance-tuning-the-dms">Performance Tuning the DMS</h3>
+<ul>
+<li>The solution must be aware of the performance tuning and limits of DMS service as mentioned here -https://docs.aws.amazon.com/dms/latest/userguide/CHAP_BestPractices.html</li>
+</ul>
+
+  <br>
+    
+
+    <br>
+</div>
+
+<footer class="col-md-12 wm-page-content">
+      <p>
+        <a href="https://github.com/ksiddiqui79/repository/edit/master/docs/bkp_dl_form_aws.md"><i class="fa fa-github"></i>
+Edit on GitHub</a>
+      </p>
+  <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a> using <a href="https://github.com/gristlabs/mkdocs-windmill">Windmill</a> theme by Grist Labs.</p>
+</footer>
+
+</body>
+</html>
