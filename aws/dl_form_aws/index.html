@@ -511,9 +511,16 @@
 
 
 
-<p>Article Credit: <a href="https://github.com/dhawalkp">dhawalkp</a> | Source Repository: <a href="https://github.com/dhawalkp/datalake">datalake</a></p>
-<p><em>Disclaimer: This code must not be used for production use as is. This sample is developed only to educate the users in using some of the features of the AWS in developing a ETL Pipeline using AWS Glue and other services. This is my personal github location and is maintained solely by me.
-This is not the official AWS Open source repository.</em></p>
+<div class="admonition important">
+<p class="admonition-title">Disclaimer:</p>
+<p><div id="disclaimer"> </div>
+<p id="credit"></p></p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Important</p>
+<p>This code must not be used for production use as is. This sample is developed only to educate the users in using some of the features of the AWS in developing a ETL Pipeline using AWS Glue and other services. This is my personal github location and is maintained solely by me.
+ This is not the official AWS Open source repository.</p>
+</div>
 <h1 id="datalake-formation-in-aws">DataLake Formation in AWS</h1>
 <p>A Data lake contains all data, both raw sources over extended periods of time as well as any processed data. They enable users across multiple business units to refine, explore and enrich data on their terms. Also, enables multiple data access patterns across a shared infrastructure: batch, interactive, online, search, in-memory and other processing engines.</p>
 <p>AWS Glue provides a serverless Spark-based data processing service. Glue is based on open source frameworks like Apache Spark and the Hive Metastore. This allows our users to go beyond the traditional ETL use cases into more data prep and data processing spanning data exploration, data science, and ofcourse data prep for analytics. 
@@ -591,8 +598,25 @@ The sample cdc log file is in repo folder - &ldquo;/data/Tier-1/Customer/CDC/YYY
 </ul>
 <h3 id="performance-tuning-the-dms">Performance Tuning the DMS</h3>
 <ul>
-<li>The solution must be aware of the performance tuning and limits of DMS service as mentioned here -https://docs.aws.amazon.com/dms/latest/userguide/CHAP_BestPractices.html</li>
-</ul></div>
+<li>The solution must be aware of the performance tuning and limits of DMS service as mentioned <a href="https://docs.aws.amazon.com/dms/latest/userguide/CHAP_BestPractices.html">here</a> </li>
+</ul>
+<script>
+    var git_user = "dhawalkp";
+    var git_tree = ""
+    var git_repo_name = "datalake";
+    var git_repo_path = git_user + "/datalake";
+//
+// Disclaimer Code
+    var disc_line = "<i>Information on this page is based on the article published by ";
+    disc_line = disc_line + "<a href='https://github.com/" + git_user + "'>" + git_user + "</a>"
+    disc_line = disc_line + " at ";
+    disc_line = disc_line + " <a href='https://github.com/" + git_repo_path + "'>" + git_repo_name + "</a> ";
+    disc_line = disc_line + " and not owned or represented by [";
+    disc_line = disc_line + "<a href='" + window.location.hostname +"'>" + window.location.hostname + "</a> ] ";
+    disc_line = disc_line + "or this article is true and accurate to the best of the authors' knowledge. ";
+    disc_line = disc_line + "Information on this site should be verified and tested before usage at your own effort and risk and <b>should not be considered as Official sources by any mean through this website.<b></i>";
+    document.getElementById("disclaimer").innerHTML = disc_line;    
+ </script></div>
         
         
     </div>
